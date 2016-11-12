@@ -137,3 +137,35 @@ hs_err_pid*
 
 # Asciidctor plugin
 .asciidoctor
+
+.idea/
+audit-service/audit-service.iml
+audit-service/src/main/generated/
+compulsive-traders/compulsive-traders.iml
+compulsive-traders/src/main/generated/
+portfolio-service/portfolio-service.iml
+quote-generator/quote-generator.iml
+quote-generator/src/main/generated/
+quote-generator/src/test/generated/
+solution/audit-service/.idea/
+solution/audit-service/audit-service.iml
+solution/compulsive-traders/.idea/
+solution/compulsive-traders/compulsive-traders.iml
+solution/portfolio-service/.idea/encodings.xml
+solution/portfolio-service/.idea/libraries/
+solution/portfolio-service/.idea/modules.xml
+solution/portfolio-service/portfolio-service.iml
+solution/quote-generator/.idea/encodings.xml
+solution/quote-generator/.idea/libraries/
+solution/quote-generator/.idea/modules.xml
+solution/quote-generator/quote-generator.iml
+solution/trader-dashboard/.idea/encodings.xml
+solution/trader-dashboard/.idea/libraries/
+solution/trader-dashboard/.idea/modules.xml
+solution/trader-dashboard/trader-dashboard.iml
+trader-dashboard/src/main/generated/
+trader-dashboard/trader-dashboard.iml
+vertx-microservice-workshop.iml
+vertx-workshop-common/src/main/generated/
+vertx-workshop-common/src/test/generated/
+vertx-workshop-common/vertx-workshop-common.iml

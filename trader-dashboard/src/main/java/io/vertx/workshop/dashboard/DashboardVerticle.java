@@ -3,7 +3,10 @@ package io.vertx.workshop.dashboard;
 import io.vertx.circuitbreaker.CircuitBreaker;
 import io.vertx.circuitbreaker.CircuitBreakerOptions;
 import io.vertx.core.Future;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -45,7 +48,7 @@ public class DashboardVerticle extends MicroServiceVerticle {
     ServiceDiscoveryRestEndpoint.create(router, discovery);
 
     // Last operations
-    router.get("/operations").handler(this::callAuditService);
+    router.get("/operations").handler(this::callAuditServiceWithExceptionHandler);
 
     // Static content
     router.route("/*").handler(StaticHandler.create());
@@ -111,5 +114,48 @@ public class DashboardVerticle extends MicroServiceVerticle {
       })
           .end();
     }
+  }
+
+
+  private void callAuditServiceWithExceptionHandler(RoutingContext context) {
+    if (client == null) {
+      context.response()
+              .putHeader("content-type", "application/json")
+              .setStatusCode(200)
+              .end(new JsonObject().put("message", "No audit service").encode());
+    } else {
+      client.get("/", response -> {
+        response
+                .exceptionHandler(context::fail)
+                .bodyHandler(buffer -> {
+                  context.response()
+                          .putHeader("content-type", "application/json")
+                          .setStatusCode(200)
+                          .end(buffer);
+                });
+      })
+              .exceptionHandler(context::fail)
+              .setTimeout(5000)
+              .end();
+    }
+  }
+
+  private void callAuditServiceWithExceptionHandlerWithCircuitBreaker(RoutingContext context) {
+    HttpServerResponse resp = context.response()
+            .putHeader("content-type", "application/json")
+            .setStatusCode(200);
+    circuit.<Buffer>executeWithFallback(
+            future ->
+                    client.get("/", response -> {
+                      response
+                              .exceptionHandler(future::fail)
+                              .bodyHandler(future::complete);
+                    })
+                        .exceptionHandler(context::fail)
+                        .setTimeout(5000)
+                        .end(),
+            t -> Buffer.buffer("{\"message\":\"No audit service, or unable to call it\"}")
+    )
+            .setHandler(ar -> resp.end(ar.result()));
   }
 }

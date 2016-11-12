@@ -51,7 +51,19 @@ public class AuditVerticle extends MicroServiceVerticle {
 
     // TODO
     // ----
-    future.fail("not implemented yet");
+    Future<Void> databaseReady = initializeDatabase(true);
+    Future<HttpServer> httpEndpointReady = configureTheHTTPServer();
+    Future<MessageConsumer<JsonObject>> messageConsumerReady = retrieveThePortfolioMessageSource();
+
+    CompositeFuture.all(databaseReady, httpEndpointReady, messageConsumerReady)
+            .setHandler(ar -> {
+              if (ar.succeeded()) {
+                messageConsumerReady.result().handler(message -> storeInDatabase(message.body()));
+                future.complete();
+              } else {
+                future.fail(ar.cause());
+              }
+            });
     // ----
   }
 
@@ -71,6 +83,51 @@ public class AuditVerticle extends MicroServiceVerticle {
 
     //TODO
     // ----
+//    Future<SQLConnection> connectionRetrieved = Future.future();
+//
+//    jdbc.getConnection(connectionRetrieved.completer());
+//
+//    Function<SQLConnection, Future<ResultSet>> queryDatabase = connection -> {
+//      Future<ResultSet> future = Future.future();
+//      connection.query(SELECT_STATEMENT, future.completer());
+//      return future;
+//    };
+//
+//    Function<ResultSet, Future<Void>> operationsRetrieved = resultSet -> {
+//      Future<Void> future = Future.future();
+//      List<JsonObject> operations = resultSet.getRows().stream()
+//              .map(json -> new JsonObject(json.getString("OPERATION")))
+//              .collect(Collectors.toList());
+//      context.response().setStatusCode(200).end(Json.encodePrettily(operations));
+//      return future;
+//    };
+//
+//    Chain.chain(connectionRetrieved, queryDatabase, operationsRetrieved)
+//            .setHandler(ar -> {
+//              // Whatever the result, if the connection has been retrieved, close it
+//              if (connectionRetrieved.result() != null) {
+//                connectionRetrieved.result().close();
+//              }
+//            });
+
+    jdbc.getConnection( ar -> {
+      SQLConnection connection = ar.result();
+      if (ar.failed()) {
+        context.fail(ar.cause());
+      } else {
+        connection.query(SELECT_STATEMENT, result -> {
+          ResultSet set = result.result();
+
+          List<JsonObject> operations = set.getRows().stream()
+                  .map(json -> new JsonObject(json.getString("OPERATION")))
+                  .collect(Collectors.toList());
+
+          context.response().setStatusCode(200).end(Json.encodePrettily(operations));
+
+          connection.close();
+        });
+      }
+    });
 
     // ----
   }
@@ -80,7 +137,12 @@ public class AuditVerticle extends MicroServiceVerticle {
 
     //TODO
     //----
+    Router router = Router.router(vertx);
+    router.get("/").handler(this::retrieveOperations);
 
+    vertx.createHttpServer()
+            .requestHandler(router::accept)
+            .listen(config().getInteger("http.port", 8081), future.completer());
     //----
     return future;
   }
